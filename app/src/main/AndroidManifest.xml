@@ -21,7 +21,13 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-
+        <receiver android:name=".view.Notification">
+            <intent-filter>
+                <action android:name="play_pause"/>
+                <action android:name="previous_intent"/>
+                <action android:name="next_intent"/>
+            </intent-filter>
+        </receiver>
     </application>
 
 </manifest>

@@ -6,8 +6,10 @@ import android.os.AsyncTask;
 import android.os.SystemClock;
 import android.util.Log;
 
+import java.util.List;
+
 import ztml.dev.ngokhacbac.exampleplaymusicservice.model.Song;
-import ztml.dev.ngokhacbac.exampleplaymusicservice.view.adapter.AdapterListSongRecycler;
+
 
 public class Mediaplayer {
     private Context context;
@@ -15,9 +17,19 @@ public class Mediaplayer {
     private MediaplayerListenner mediaplayerListenner;
     private static Mediaplayer INSTANCE = null;
     private PlayDuration playDuration;
-
+    private Song songPlaying;
+    private int positionPlayingSong = 0;
+    private List<Song> list;
     public Mediaplayer(Context context) {
         this.context = context;
+    }
+
+    public List<Song> getList() {
+        return list;
+    }
+
+    public void setList(List<Song> list) {
+        this.list = list;
     }
 
     public void setOnMediaListenner(MediaplayerListenner mediaplayerListenner) {
@@ -36,17 +48,47 @@ public class Mediaplayer {
         mediaPlayer = MediaPlayer.create(context, song.getmSongRaw());
     }
 
-    public void PlaySong(Song song, int position) {
+    // Tua bài hát (phát tiếp bài hát từ vị trí pos trở đi)
+    public void fastForward(int pos) {
+        mediaPlayer.seekTo(pos);
         mediaPlayer.start();
-        mediaPlayer.getCurrentPosition();
-        song.setCurrentDuration(0);
+    }
+
+    public void PlaySong(Song song, int position) {
+        songPlaying = song;
+        positionPlayingSong = position;
+        if (song.getCurrentDuration() != 0) {
+            fastForward(song.getCurrentDuration());
+        } else {
+            mediaPlayer.start();
+            mediaPlayer.getCurrentPosition();
+            song.setCurrentDuration(0);
+        }
+
         playDuration = new PlayDuration();
-        playDuration.execute(mediaPlayer.getDuration(), position);
+        /**
+         * @param 0 : lấy tổng thời gian của bài hát
+         * @param 1 : lấy thời gian bắt đầu phát
+         * @param 2 : position của bài hát
+         * */
+        playDuration.execute(mediaPlayer.getDuration(), song.getCurrentDuration(), position);
 
     }
 
+    public int getPositionPlayingSong() {
+        return positionPlayingSong;
+    }
+
+    public Song getSongPlaying() {
+        return songPlaying;
+    }
+
+    public void setSongPlaying(Song song) {
+        this.songPlaying = song;
+    }
+
     public void Pause() {
-        mediaPlayer.release();
+        mediaPlayer.pause();
         playDuration.cancel(true);
     }
 
@@ -57,13 +99,13 @@ public class Mediaplayer {
         @Override
         protected Integer doInBackground(Integer... integers) {
             Log.i("TAG", "  playing" + integers[0]);
-            int duration = 0;
+            int duration = integers[1];
             while (duration < integers[0]) {
                 if (isCancelled()) return null;
                 SystemClock.sleep(100);
-                publishProgress(duration += 100, integers[0], integers[1]);
+                publishProgress(duration += 100, integers[0], integers[2]);
             }
-            return  integers[1];
+            return integers[2];
         }
 
         @Override
@@ -84,6 +126,7 @@ public class Mediaplayer {
             super.onPostExecute(integer);
             this.cancel(true);
             mediaplayerListenner.FinishSong(integer);
+            setSongPlaying(null);
             Log.i("TAG", "  finish");
         }
     }
